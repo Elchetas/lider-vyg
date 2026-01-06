@@ -34,7 +34,7 @@ RUN npm run build
 EXPOSE 8000
 
 # Runtime (variables reales de Render)
-CMD php artisan key:generate --force || true && \
-    php artisan package:discover --ansi && \
+CMD php artisan package:discover --ansi && \
     php artisan migrate --force && \
     php artisan serve --host=0.0.0.0 --port=8000
+
