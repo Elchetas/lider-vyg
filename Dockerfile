@@ -1,56 +1,36 @@
-FROM php:8.2-apache
+FROM php:8.2-fpm
 
-# ===============================
-# Dependencias del sistema
-# ===============================
+# Sistema
 RUN apt-get update && apt-get install -y \
-    git unzip libzip-dev libpng-dev libonig-dev libxml2-dev libpq-dev \
-    && docker-php-ext-install pdo pdo_mysql pdo_pgsql zip
+    git curl zip unzip \
+    libpq-dev libonig-dev libxml2-dev \
+    nodejs npm
 
-# ===============================
-# Apache (Laravel necesita rewrite)
-# ===============================
-RUN a2enmod rewrite
+# PHP extensions
+RUN docker-php-ext-install pdo pdo_pgsql mbstring xml
 
-# ===============================
-# Directorio de trabajo
-# ===============================
-WORKDIR /var/www/html
+# Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# ===============================
+WORKDIR /var/www
+
 # Copiar proyecto
-# ===============================
 COPY . .
 
-# ===============================
-# Crear carpetas necesarias + permisos
-# (FIX definitivo para "valid cache path")
-# ===============================
-RUN mkdir -p \
-    /var/www/html/storage/framework/cache \
-    /var/www/html/storage/framework/sessions \
-    /var/www/html/storage/framework/views \
-    /var/www/html/storage/logs \
-    /var/www/html/bootstrap/cache \
-    && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+# Permisos Laravel
+RUN chown -R www-data:www-data /var/www \
+    && chmod -R 775 storage bootstrap/cache
 
-# ===============================
-# Composer
-# ===============================
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+# 👉 COMPOSER SIN --no-scripts
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# ===============================
-# Laravel (configuración + migraciones)
-# ===============================
-RUN php artisan key:generate \
-    && php artisan config:clear \
-    && php artisan route:clear \
-    && php artisan view:clear \
-    && php artisan migrate --force
+# Frontend
+RUN npm install
+RUN npm run build
 
-# ===============================
-# Puerto
-# ===============================
-EXPOSE 80
+EXPOSE 8000
+
+# Cache + migraciones + run
+CMD php artisan key:generate --force || true && \
+    php artisan migrate --force && \
+    php artisan serve --host=0.0.0.0 --port=8000
