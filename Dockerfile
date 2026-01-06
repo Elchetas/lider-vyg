@@ -1,76 +1,49 @@
 FROM php:8.2-apache
 
-# ==============================
-# Variables
-# ==============================
-ENV PORT=10000
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-
-# ==============================
+# ===============================
 # Dependencias del sistema
-# ==============================
+# ===============================
 RUN apt-get update && apt-get install -y \
-    git unzip curl \
-    libzip-dev libpng-dev libonig-dev \
-    nodejs npm \
-    && rm -rf /var/lib/apt/lists/*
+    git unzip libzip-dev libpng-dev libonig-dev libxml2-dev \
+    && docker-php-ext-install pdo pdo_mysql pdo_pgsql zip
 
-# ==============================
-# Extensiones PHP
-# ==============================
-RUN docker-php-ext-install pdo pdo_mysql zip mbstring gd
-
-# ==============================
-# Apache
-# ==============================
+# ===============================
+# Apache (Laravel necesita rewrite)
+# ===============================
 RUN a2enmod rewrite
 
-# Apache escucha en $PORT (CRÍTICO PARA RENDER)
-RUN sed -i "s/Listen 80/Listen ${PORT}/" /etc/apache2/ports.conf \
- && sed -i "s/:80/:${PORT}/" /etc/apache2/sites-available/000-default.conf
-
-# DocumentRoot → /public
-RUN sed -i "s|/var/www/html|${APACHE_DOCUMENT_ROOT}|g" \
-    /etc/apache2/sites-available/000-default.conf
-
-# AllowOverride para .htaccess
-RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' \
-    /etc/apache2/apache2.conf
-
-# ==============================
-# Proyecto
-# ==============================
+# ===============================
+# Directorio de trabajo
+# ===============================
 WORKDIR /var/www/html
+
+# ===============================
+# Copiar proyecto
+# ===============================
 COPY . .
 
-# ==============================
-# Composer (MULTI-STAGE)
-# ==============================
+# ===============================
+# Permisos para Laravel
+# ===============================
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
+# ===============================
+# Composer
+# ===============================
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+# ===============================
+# Laravel (configuración y migraciones)
+# ===============================
+RUN php artisan key:generate \
+    && php artisan config:clear \
+    && php artisan route:clear \
+    && php artisan view:clear \
+    && php artisan migrate --force
 
-# ==============================
-# Limpieza de caché Laravel
-# ==============================
-RUN php artisan config:clear || true \
- && php artisan route:clear || true \
- && php artisan view:clear || true
-
-# ==============================
-# Frontend
-# ==============================
-RUN npm install && npm run build
-
-# ==============================
-# Permisos (CRÍTICO)
-# ==============================
-RUN chown -R www-data:www-data storage bootstrap/cache \
- && chmod -R 775 storage bootstrap/cache
-
-# ==============================
-# Puerto Render
-# ==============================
-EXPOSE 10000
-
-CMD ["apache2-foreground"]
+# ===============================
+# Puerto
+# ===============================
+EXPOSE 80
