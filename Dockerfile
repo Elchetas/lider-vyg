@@ -23,9 +23,16 @@ WORKDIR /var/www/html
 COPY . .
 
 # ===============================
-# Permisos para Laravel
+# Crear carpetas necesarias + permisos
+# (FIX definitivo para "valid cache path")
 # ===============================
-RUN chown -R www-data:www-data /var/www/html \
+RUN mkdir -p \
+    /var/www/html/storage/framework/cache \
+    /var/www/html/storage/framework/sessions \
+    /var/www/html/storage/framework/views \
+    /var/www/html/storage/logs \
+    /var/www/html/bootstrap/cache \
+    && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # ===============================
@@ -35,7 +42,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # ===============================
-# Laravel (configuración y migraciones)
+# Laravel (configuración + migraciones)
 # ===============================
 RUN php artisan key:generate \
     && php artisan config:clear \
