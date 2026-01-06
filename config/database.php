@@ -9,13 +9,11 @@ return [
     | Default Database Connection Name
     |--------------------------------------------------------------------------
     |
-    | En Docker / Render:
-    | - SQLite SOLO para desarrollo local
-    | - MySQL recomendado en producción
+    | Render usa PostgreSQL en producción
     |
     */
 
-    'default' => 'sqlite',
+    'default' => env('DB_CONNECTION', 'pgsql'),
 
     /*
     |--------------------------------------------------------------------------
@@ -27,7 +25,7 @@ return [
 
         /*
         |--------------------------------------------------------------------------
-        | SQLite (SOLO LOCAL / LECTURA)
+        | SQLite (SOLO DESARROLLO LOCAL)
         |--------------------------------------------------------------------------
         */
 
@@ -40,50 +38,22 @@ return [
 
         /*
         |--------------------------------------------------------------------------
-        | MySQL / MariaDB (RENDER / PRODUCCIÓN)
+        | PostgreSQL (RENDER / PRODUCCIÓN)
         |--------------------------------------------------------------------------
         */
 
-        'mysql' => [
-            'driver' => 'mysql',
-            'host' => '127.0.0.1',
-            'port' => '3306',
-            'database' => 'lider_vyg',
-            'username' => 'lider_user',
-            'password' => 'lider_password',
-            'unix_socket' => '',
-            'charset' => 'utf8mb4',
-            'collation' => 'utf8mb4_unicode_ci',
+        'pgsql' => [
+            'driver' => 'pgsql',
+            'host' => env('DB_HOST'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE'),
+            'username' => env('DB_USERNAME'),
+            'password' => env('DB_PASSWORD'),
+            'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
-            'strict' => true,
-            'engine' => null,
-            'options' => extension_loaded('pdo_mysql')
-                ? [
-                    \PDO::MYSQL_ATTR_SSL_CA => null,
-                ]
-                : [],
-        ],
-
-        /*
-        |--------------------------------------------------------------------------
-        | MariaDB (ALIAS)
-        |--------------------------------------------------------------------------
-        */
-
-        'mariadb' => [
-            'driver' => 'mariadb',
-            'host' => '127.0.0.1',
-            'port' => '3306',
-            'database' => 'lider_vyg',
-            'username' => 'lider_user',
-            'password' => 'lider_password',
-            'charset' => 'utf8mb4',
-            'collation' => 'utf8mb4_unicode_ci',
-            'prefix' => '',
-            'prefix_indexes' => true,
-            'strict' => true,
-            'engine' => null,
+            'schema' => 'public',
+            'sslmode' => 'require',
         ],
 
     ],
@@ -111,8 +81,7 @@ return [
 
         'options' => [
             'cluster' => 'redis',
-            'prefix' => Str::slug('lider-vyg').'-db-',
-            'persistent' => false,
+            'prefix' => Str::slug(env('APP_NAME', 'lider-vyg'), '_').'_database_',
         ],
 
         'default' => [
