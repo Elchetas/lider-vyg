@@ -13,6 +13,15 @@ use App\Http\Controllers\ReporteClientesMensualController;
 use App\Http\Controllers\ReporteProveedoresMensualController;
 use App\Http\Controllers\ReporteVentaController;
 
+
+
+use App\Models\User;
+
+Route::get('/debug-user', function () {
+    return User::where('email', 'admin@admin.com')->first();
+});
+
+
 /*
 |--------------------------------------------------------------------------
 | RUTA PRINCIPAL
