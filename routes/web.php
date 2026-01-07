@@ -188,9 +188,11 @@ Route::middleware(['auth'])->group(function () {
 */
 require __DIR__ . '/auth.php';
 
+
+
 use App\Models\Product;
 
 Route::get('/reset-products', function () {
-    Product::truncate(); // elimina TODOS los productos
+    Product::query()->delete();
     return 'Productos eliminados correctamente';
 });
