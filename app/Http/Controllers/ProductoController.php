@@ -16,12 +16,10 @@ class ProductoController extends Controller
      */
     public function index(Request $request)
     {
-        /* ================= CLIENTES ================= */
         $clientes = Cliente::where('activo', 1)
             ->orderBy('nombre_cliente', 'asc')
             ->get();
 
-        /* ================= FILTROS ================= */
         $q         = $request->get('q');
         $proveedor = $request->get('proveedor');
 
@@ -50,14 +48,12 @@ class ProductoController extends Controller
             ->orderBy('nombre_proveedor', 'asc')
             ->pluck('nombre_proveedor');
 
-        /* ================= MODO EDICIÓN ================= */
         $cotizacionJs = null;
 
         if ($request->filled('cotizacion_id')) {
             $cotizacion = Cotizacion::with(['cliente', 'detalles'])
                 ->findOrFail($request->cotizacion_id);
 
-            // Solo editable si está Pendiente
             if ($cotizacion->estado !== 'Pendiente') {
                 return redirect()
                     ->route('cotizaciones.show', $cotizacion)
@@ -72,9 +68,7 @@ class ProductoController extends Controller
                 'moneda'        => $cotizacion->moneda,
                 'afecto_igv'    => (bool) $cotizacion->afecto_igv,
                 'observaciones' => $cotizacion->observaciones,
-
-                // 👇 Productos de la cotización
-                'detalles' => $cotizacion->detalles->map(function ($d) {
+                'detalles'      => $cotizacion->detalles->map(function ($d) {
                     return [
                         'producto_id'     => (string) $d->producto_id,
                         'codigo'          => $d->codigo,
@@ -87,19 +81,19 @@ class ProductoController extends Controller
             ];
         }
 
-        return view('productos.catalogo', [
-            'clientes'     => $clientes,
-            'productos'    => $productos,
-            'proveedores'  => $proveedores,
-            'q'            => $q,
-            'proveedor'    => $proveedor,
-            'cotizacionJs' => $cotizacionJs, // null = crear | array = editar
-        ]);
+        return view('productos.catalogo', compact(
+            'clientes',
+            'productos',
+            'proveedores',
+            'q',
+            'proveedor',
+            'cotizacionJs'
+        ));
     }
 
     /**
      * =====================================================
-     * ADMINISTRACIÓN DE PRODUCTOS
+     * ADMINISTRACIÓN
      * =====================================================
      */
     public function adminIndex()
@@ -113,34 +107,47 @@ class ProductoController extends Controller
         return view('productos.create');
     }
 
+    /**
+     * =====================================================
+     * GUARDAR PRODUCTO
+     * =====================================================
+     */
     public function store(Request $request)
     {
         $data = $request->validate([
-            'codigo'            => 'required|string|max:255',
-            'nombre_producto'   => 'required|string|max:255',
-            'descripcion'       => 'nullable|string',
-            'precio_obra'       => 'required|numeric|min:0',
-            'precio_edificio'   => 'required|numeric|min:0',
-            'precio_proveedor'  => 'nullable|numeric|min:0',
-            'cantidad'          => 'nullable|integer|min:0',
-            'nombre_proveedor'  => 'nullable|string|max:255',
-            'observaciones'     => 'nullable|string',
-            'activo'            => 'nullable|boolean',
-            'imagen'            => 'nullable|string|max:255',
+            'codigo'           => 'required|string|max:255',
+            'nombre_producto'  => 'required|string|max:255',
+            'descripcion'      => 'nullable|string',
+            'precio_obra'      => 'required|numeric|min:0',
+            'precio_edificio'  => 'required|numeric|min:0',
+            'precio_proveedor' => 'nullable|numeric|min:0',
+            'cantidad'         => 'nullable|integer|min:0',
+            'nombre_proveedor' => 'nullable|string|max:255',
+            'observaciones'    => 'nullable|string',
+            'activo'           => 'nullable|boolean',
+            'imagen'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         $data['activo'] = $request->boolean('activo', true);
 
-        // Compatibilidad legacy
+        // legacy
         $data['precio']      = $data['precio_obra'];
         $data['precio_prov'] = $data['precio_proveedor'] ?? 0;
         $data['proveedor']   = $data['nombre_proveedor'] ?? null;
+
+        // 🔽 GUARDAR IMAGEN
+        if ($request->hasFile('imagen')) {
+            $file = $request->file('imagen');
+            $nombre = $data['codigo'] . '.' . $file->getClientOriginalExtension();
+            $file->move(public_path('productos'), $nombre);
+            $data['imagen'] = $nombre;
+        }
 
         CatalogoProducto::create($data);
 
         return redirect()
             ->route('productos.admin.index')
-            ->with('ok', 'Producto creado');
+            ->with('ok', 'Producto creado correctamente');
     }
 
     public function edit(CatalogoProducto $producto)
@@ -148,38 +155,66 @@ class ProductoController extends Controller
         return view('productos.edit', compact('producto'));
     }
 
+    /**
+     * =====================================================
+     * ACTUALIZAR PRODUCTO
+     * =====================================================
+     */
     public function update(Request $request, CatalogoProducto $producto)
     {
         $data = $request->validate([
-            'codigo'            => 'required|string|max:255',
-            'nombre_producto'   => 'required|string|max:255',
-            'descripcion'       => 'nullable|string',
-            'precio_obra'       => 'required|numeric|min:0',
-            'precio_edificio'   => 'required|numeric|min:0',
-            'precio_proveedor'  => 'nullable|numeric|min:0',
-            'cantidad'          => 'nullable|integer|min:0',
-            'nombre_proveedor'  => 'nullable|string|max:255',
-            'observaciones'     => 'nullable|string',
-            'activo'            => 'nullable|boolean',
-            'imagen'            => 'nullable|string|max:255',
+            'codigo'           => 'required|string|max:255',
+            'nombre_producto'  => 'required|string|max:255',
+            'descripcion'      => 'nullable|string',
+            'precio_obra'      => 'required|numeric|min:0',
+            'precio_edificio'  => 'required|numeric|min:0',
+            'precio_proveedor' => 'nullable|numeric|min:0',
+            'cantidad'         => 'nullable|integer|min:0',
+            'nombre_proveedor' => 'nullable|string|max:255',
+            'observaciones'    => 'nullable|string',
+            'activo'           => 'nullable|boolean',
+            'imagen'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         $data['activo'] = $request->boolean('activo', true);
 
-        // Compatibilidad legacy
+        // legacy
         $data['precio']      = $data['precio_obra'];
         $data['precio_prov'] = $data['precio_proveedor'] ?? $producto->precio_prov ?? 0;
         $data['proveedor']   = $data['nombre_proveedor'] ?? $producto->proveedor;
+
+        // 🔽 ACTUALIZAR IMAGEN
+        if ($request->hasFile('imagen')) {
+            $file = $request->file('imagen');
+            $nombre = $data['codigo'] . '.' . $file->getClientOriginalExtension();
+
+            if ($producto->imagen) {
+                $old = public_path('productos/' . $producto->imagen);
+                if (is_file($old)) {
+                    unlink($old);
+                }
+            }
+
+            $file->move(public_path('productos'), $nombre);
+            $data['imagen'] = $nombre;
+        }
 
         $producto->update($data);
 
         return redirect()
             ->route('productos.admin.index')
-            ->with('ok', 'Producto actualizado');
+            ->with('ok', 'Producto actualizado correctamente');
     }
 
     public function destroy(CatalogoProducto $producto)
     {
+        if ($producto->imagen) {
+            $img = public_path('productos/' . $producto->imagen);
+            if (is_file($img)) {
+                unlink($img);
+            }
+        }
+
         $producto->delete();
 
         return redirect()

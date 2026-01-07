@@ -9,13 +9,7 @@ class CatalogoProducto extends Model
     protected $table = 'catalogo_productos';
 
     /**
-     * Catálogo (estructura oficial solicitada por el usuario)
-     *
-     * codigo, nombre_producto, descripcion, precio_obra, precio_edificio,
-     * cantidad, precio_proveedor, imagen, nombre_proveedor, observaciones
-     *
-     * Nota: se mantienen campos legacy (precio, precio_prov, proveedor, imagen_path)
-     * para compatibilidad si existen datos antiguos.
+     * Campos oficiales + legacy
      */
     protected $fillable = [
         'codigo',
@@ -30,7 +24,7 @@ class CatalogoProducto extends Model
         'observaciones',
         'activo',
 
-        // legacy
+        // legacy (NO BORRAR)
         'precio',
         'precio_prov',
         'proveedor',
@@ -38,58 +32,65 @@ class CatalogoProducto extends Model
     ];
 
     protected $casts = [
-        'activo' => 'boolean',
-        'precio_obra' => 'decimal:2',
-        'precio_edificio' => 'decimal:2',
-        'precio_proveedor' => 'decimal:2',
-        'precio' => 'decimal:2',
-        'precio_prov' => 'decimal:2',
-        'cantidad' => 'integer',
+        'activo'            => 'boolean',
+        'precio_obra'       => 'decimal:2',
+        'precio_edificio'   => 'decimal:2',
+        'precio_proveedor'  => 'decimal:2',
+        'precio'            => 'decimal:2',
+        'precio_prov'       => 'decimal:2',
+        'cantidad'          => 'integer',
     ];
 
     /**
-     * URL de imagen (prioriza columna oficial "imagen", luego legacy "imagen_path")
+     * =====================================================
+     * URL FINAL DE IMAGEN
+     * =====================================================
+     * Prioridad:
+     * 1) columna imagen
+     * 2) columna legacy imagen_path
+     * 3) búsqueda por código en /public/productos
      */
     public function getImagenUrlAttribute(): ?string
     {
-        // 1) Columna oficial "imagen" (puede venir como nombre o ruta)
         $img = $this->imagen ?: $this->imagen_path;
 
-        // Helper para buscar en /public/productos por nombre sin extensión
-        $findInPublicProductos = function (string $base): ?string {
+        // helper: buscar imagen en /public/productos
+        $buscar = function (string $base): ?string {
             $base = trim($base);
             if ($base === '') return null;
 
-            $candidates = [
-                "productos/{$base}.jpg",
-                "productos/{$base}.jpeg",
-                "productos/{$base}.png",
-                "productos/{$base}.webp",
-            ];
+            $exts = ['jpg', 'jpeg', 'png', 'webp'];
 
-            foreach ($candidates as $rel) {
-                $full = public_path($rel);
-                if (is_file($full)) {
+            foreach ($exts as $ext) {
+                $rel = "productos/{$base}.{$ext}";
+                if (is_file(public_path($rel))) {
                     return '/' . $rel;
                 }
             }
             return null;
         };
 
-        // Si viene URL absoluta o ruta ya armada, respetar
         if ($img) {
-            $img = trim((string)$img);
+            $img = trim((string) $img);
 
-            if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://') || str_starts_with($img, '/')) {
+            // URL absoluta o ruta ya válida
+            if (
+                str_starts_with($img, 'http://') ||
+                str_starts_with($img, 'https://') ||
+                str_starts_with($img, '/')
+            ) {
                 return $img;
             }
 
-            // Si ya incluye carpeta (ej: productos/D0001.jpg), servir desde /public
+            // Ej: productos/D0001.jpg
             if (str_contains($img, '/')) {
-                return '/' . ltrim($img, '/');
+                $full = public_path(ltrim($img, '/'));
+                if (is_file($full)) {
+                    return '/' . ltrim($img, '/');
+                }
             }
 
-            // Si viene con extensión (ej: D0001.jpg) lo intentamos dentro de /productos
+            // Ej: D0001.jpg
             if (str_contains($img, '.')) {
                 $full = public_path('productos/' . $img);
                 if (is_file($full)) {
@@ -97,14 +98,14 @@ class CatalogoProducto extends Model
                 }
             }
 
-            // Si viene sin extensión, buscarlo en /public/productos
-            $found = $findInPublicProductos($img);
+            // Ej: D0001 (sin extensión)
+            $found = $buscar($img);
             if ($found) return $found;
         }
 
-        // 2) Fallback fuerte: buscar por CÓDIGO (public/productos/D0001.jpg/png/...)
+        // Fallback final: buscar por código
         if ($this->codigo) {
-            $found = $findInPublicProductos($this->codigo);
+            $found = $buscar($this->codigo);
             if ($found) return $found;
         }
 
@@ -112,15 +113,19 @@ class CatalogoProducto extends Model
     }
 
     /**
-     * Precio unitario según tipo (obra/edificio)
+     * =====================================================
+     * PRECIO SEGÚN TIPO
+     * =====================================================
      */
     public function precioSegunTipo(string $tipo): float
     {
         $tipo = strtolower(trim($tipo));
+
         if ($tipo === 'edificio') {
-            return (float)($this->precio_edificio ?? $this->precio ?? 0);
+            return (float) ($this->precio_edificio ?? $this->precio ?? 0);
         }
-        // default obra
-        return (float)($this->precio_obra ?? $this->precio ?? 0);
+
+        // default: obra
+        return (float) ($this->precio_obra ?? $this->precio ?? 0);
     }
 }

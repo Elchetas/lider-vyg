@@ -59,7 +59,7 @@
   </div>
 
   <div class="col-md-6">
-    <label class="form-label">Cantidad (referencial en catálogo)</label>
+    <label class="form-label">Cantidad</label>
     <input name="cantidad"
            type="number"
            step="1"
@@ -82,10 +82,9 @@
            accept="image/*"
            class="form-control">
 
-    @php($img = $p?->imagen_url)
-    @if(!empty($img))
+    @if($p->imagen_url)
       <div class="mt-2">
-        <img src="{{ $img }}"
+        <img src="{{ $p->imagen_url }}?v={{ $p->updated_at?->timestamp }}"
              alt="Imagen del producto"
              class="img-thumbnail"
              style="height:80px">

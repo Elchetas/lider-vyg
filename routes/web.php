@@ -190,12 +190,12 @@ require __DIR__ . '/auth.php';
 
 
 
-use Illuminate\Support\Facades\DB;
+//use Illuminate\Support\Facades\DB;
 
-Route::get('/reset-products', function () {
-    DB::table('catalogo_productos')->delete();
-    return 'Productos eliminados correctamente';
+//Route::get('/reset-products', function () {
+   // DB::table('catalogo_productos')->delete();
+   // return 'Productos eliminados correctamente';
     //https://lider-vyg.onrender.com/reset-products
 
-});
+//});
 
