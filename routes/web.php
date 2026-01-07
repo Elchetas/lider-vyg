@@ -190,9 +190,10 @@ require __DIR__ . '/auth.php';
 
 
 
-use App\Models\CatalogoProducto;
+use Illuminate\Support\Facades\DB;
 
 Route::get('/reset-products', function () {
-    Producto::query()->delete();
+    DB::statement('TRUNCATE TABLE productos RESTART IDENTITY CASCADE');
     return 'Productos eliminados correctamente';
 });
+
