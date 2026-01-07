@@ -15,11 +15,15 @@ use App\Http\Controllers\ReporteVentaController;
 
 
 
-use App\Models\User;
-
-Route::get('/debug-user', function () {
-    return User::where('email', 'admin@admin.com')->first();
+Route::get('/debug-auth', function () {
+    return [
+        'exists' => \App\Models\User::where('email','admin@admin.com')->exists(),
+        'guard' => config('auth.defaults.guard'),
+        'check' => auth()->check(),
+    ];
 });
+
+
 
 
 /*
