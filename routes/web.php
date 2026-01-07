@@ -193,7 +193,9 @@ require __DIR__ . '/auth.php';
 use Illuminate\Support\Facades\DB;
 
 Route::get('/reset-products', function () {
-    DB::statement('TRUNCATE TABLE productos RESTART IDENTITY CASCADE');
+    DB::table('catalogo_productos')->delete();
     return 'Productos eliminados correctamente';
+    //https://lider-vyg.onrender.com/reset-products
+
 });
 
