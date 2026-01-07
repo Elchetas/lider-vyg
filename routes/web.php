@@ -14,12 +14,6 @@ use App\Http\Controllers\ReporteProveedoresMensualController;
 use App\Http\Controllers\ReporteVentaController;
 
 
-Route::get('/debug-auth', function () {
-    return 'DEBUG OK';
-});
-
-
-
 /*
 |--------------------------------------------------------------------------
 | RUTA PRINCIPAL
@@ -193,3 +187,10 @@ Route::middleware(['auth'])->group(function () {
 |--------------------------------------------------------------------------
 */
 require __DIR__ . '/auth.php';
+
+use App\Models\Product;
+
+Route::get('/reset-products', function () {
+    Product::truncate(); // elimina TODOS los productos
+    return 'Productos eliminados correctamente';
+});
