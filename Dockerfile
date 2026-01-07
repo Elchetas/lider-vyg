@@ -54,7 +54,10 @@ EXPOSE 8000
 # ===============================
 # Runtime (Render Free)
 # ===============================
-CMD php artisan key:generate --force && \
+CMD php artisan config:clear && \
+    php artisan route:clear && \
+    php artisan view:clear && \
+    php artisan key:generate --force && \
     php artisan migrate --force && \
     php artisan db:seed --force && \
     php artisan serve --host=0.0.0.0 --port=8000

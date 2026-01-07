@@ -14,15 +14,9 @@ use App\Http\Controllers\ReporteProveedoresMensualController;
 use App\Http\Controllers\ReporteVentaController;
 
 
-
 Route::get('/debug-auth', function () {
-    return [
-        'exists' => \App\Models\User::where('email','admin@admin.com')->exists(),
-        'guard' => config('auth.defaults.guard'),
-        'check' => auth()->check(),
-    ];
+    return 'DEBUG OK';
 });
-
 
 
 
