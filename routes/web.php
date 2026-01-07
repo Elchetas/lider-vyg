@@ -190,9 +190,9 @@ require __DIR__ . '/auth.php';
 
 
 
-use App\Models\Product;
+use App\Models\CatalogoProducto;
 
 Route::get('/reset-products', function () {
-    Product::query()->delete();
+    Producto::query()->delete();
     return 'Productos eliminados correctamente';
 });
