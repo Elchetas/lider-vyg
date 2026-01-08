@@ -398,6 +398,26 @@
   });
 };
 
+  const applyTipoPrecioFilter = () => {
+  const tipo = selTipo.value;
+  const cards = document.querySelectorAll('.producto-card');
+
+  cards.forEach(card => {
+    const precioObra = parseFloat(card.dataset.precioObra || '0');
+    const precioEdif = parseFloat(card.dataset.precioEdificio || '0');
+
+    let visible = true;
+
+    if (tipo === 'edificio') {
+      visible = precioEdif > 0;
+    } else {
+      visible = precioObra > 0;
+    }
+
+    card.style.display = visible ? '' : 'none';
+  });
+};
+
 
     // Mantener URL en sync (sin recargar)
     try {
@@ -615,22 +635,26 @@
   }
 
   selCliente.addEventListener('change', () => {
-  if (!window.COTIZACION_EDIT) suggestTipoByCliente();
-  applyClienteState();
-  syncPricesToTipo();
-  applyFilters();   // 👈 AÑADIR ESTO
-  renderCart();
-});
+    if (!window.COTIZACION_EDIT) {
+      suggestTipoByCliente();
+    }
+
+    applyClienteState();
+    applyTipoPrecioFilter();
+    syncPricesToTipo();
+    renderCart();
+  });
 
 
   document.getElementById('moneda').addEventListener('change', renderCart);
   document.getElementById('afecto_igv').addEventListener('change', renderCart);
 
   selTipo.addEventListener('change', () => {
-  syncPricesToTipo();
-  applyFilters();   // 👈 AÑADIR ESTO
-  renderCart();
-});
+    applyTipoPrecioFilter();
+    syncPricesToTipo();
+    renderCart();
+  });
+
 
 
   // -------------------------------
@@ -728,6 +752,7 @@
   // -------------------------------
   preloadEdit();
   syncPricesToTipo();
+  applyTipoPrecioFilter();
   renderCart();
 
 })();
