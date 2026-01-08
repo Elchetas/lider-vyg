@@ -16,15 +16,35 @@ class ProductoController extends Controller
      */
     public function index(Request $request)
     {
+        /* ================= CLIENTES ================= */
         $clientes = Cliente::where('activo', 1)
             ->orderBy('nombre_cliente', 'asc')
             ->get();
 
-        $q         = $request->get('q');
-        $proveedor = $request->get('proveedor');
+        /* ================= FILTROS ================= */
+        $q          = $request->get('q');
+        $proveedor  = $request->get('proveedor');
+        $clienteId  = $request->get('cliente_id');
 
         $productosQuery = CatalogoProducto::where('activo', 1);
 
+        /* ================= FILTRO POR CLIENTE (OBRA / EDIFICIO) ================= */
+        $tipoPrecio = null;
+
+        if ($clienteId) {
+            $cliente = Cliente::find($clienteId);
+            $tipoPrecio = $cliente?->tipo_precio; // 'obra' | 'edificio'
+        }
+
+        if ($tipoPrecio === 'obra') {
+            $productosQuery->where('precio_obra', '>', 0);
+        }
+
+        if ($tipoPrecio === 'edificio') {
+            $productosQuery->where('precio_edificio', '>', 0);
+        }
+
+        /* ================= BÚSQUEDA ================= */
         if ($q) {
             $productosQuery->where(function ($w) use ($q) {
                 $w->where('codigo', 'like', "%{$q}%")
@@ -48,6 +68,7 @@ class ProductoController extends Controller
             ->orderBy('nombre_proveedor', 'asc')
             ->pluck('nombre_proveedor');
 
+        /* ================= EDICIÓN DE COTIZACIÓN ================= */
         $cotizacionJs = null;
 
         if ($request->filled('cotizacion_id')) {
@@ -81,14 +102,15 @@ class ProductoController extends Controller
             ];
         }
 
-        return view('productos.catalogo', compact(
-            'clientes',
-            'productos',
-            'proveedores',
-            'q',
-            'proveedor',
-            'cotizacionJs'
-        ));
+        return view('productos.catalogo', [
+            'clientes'            => $clientes,
+            'productos'           => $productos,
+            'proveedores'         => $proveedores,
+            'q'                   => $q,
+            'proveedor'           => $proveedor,
+            'cotizacionJs'        => $cotizacionJs,
+            'clienteSeleccionado' => $clienteId,
+        ]);
     }
 
     /**
@@ -135,7 +157,6 @@ class ProductoController extends Controller
         $data['precio_prov'] = $data['precio_proveedor'] ?? 0;
         $data['proveedor']   = $data['nombre_proveedor'] ?? null;
 
-        // 🔽 GUARDAR IMAGEN
         if ($request->hasFile('imagen')) {
             $file = $request->file('imagen');
             $nombre = $data['codigo'] . '.' . $file->getClientOriginalExtension();
@@ -148,11 +169,6 @@ class ProductoController extends Controller
         return redirect()
             ->route('productos.admin.index')
             ->with('ok', 'Producto creado correctamente');
-    }
-
-    public function edit(CatalogoProducto $producto)
-    {
-        return view('productos.edit', compact('producto'));
     }
 
     /**
@@ -183,18 +199,13 @@ class ProductoController extends Controller
         $data['precio_prov'] = $data['precio_proveedor'] ?? $producto->precio_prov ?? 0;
         $data['proveedor']   = $data['nombre_proveedor'] ?? $producto->proveedor;
 
-        // 🔽 ACTUALIZAR IMAGEN
         if ($request->hasFile('imagen')) {
-            $file = $request->file('imagen');
-            $nombre = $data['codigo'] . '.' . $file->getClientOriginalExtension();
-
-            if ($producto->imagen) {
-                $old = public_path('productos/' . $producto->imagen);
-                if (is_file($old)) {
-                    unlink($old);
-                }
+            if ($producto->imagen && is_file(public_path('productos/' . $producto->imagen))) {
+                unlink(public_path('productos/' . $producto->imagen));
             }
 
+            $file = $request->file('imagen');
+            $nombre = $data['codigo'] . '.' . $file->getClientOriginalExtension();
             $file->move(public_path('productos'), $nombre);
             $data['imagen'] = $nombre;
         }
@@ -208,11 +219,8 @@ class ProductoController extends Controller
 
     public function destroy(CatalogoProducto $producto)
     {
-        if ($producto->imagen) {
-            $img = public_path('productos/' . $producto->imagen);
-            if (is_file($img)) {
-                unlink($img);
-            }
+        if ($producto->imagen && is_file(public_path('productos/' . $producto->imagen))) {
+            unlink(public_path('productos/' . $producto->imagen));
         }
 
         $producto->delete();

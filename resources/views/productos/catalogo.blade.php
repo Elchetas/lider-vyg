@@ -365,18 +365,39 @@
   const norm = (s) => String(s || '').toLowerCase().trim();
 
   const applyFilters = () => {
-    if (!productosRow) return;
-    const txt = norm(buscador?.value);
-    const prov = norm(filtroProveedor?.value);
+  if (!productosRow) return;
 
-    const cards = productosRow.querySelectorAll('.producto-card');
-    cards.forEach(card => {
-      const haystack = norm(`${card.dataset.codigo} ${card.dataset.nombre} ${card.dataset.descripcion}`);
-      const cardProv = norm(card.dataset.proveedor);
-      const okTxt = !txt || haystack.includes(txt);
-      const okProv = !prov || cardProv === prov;
-      card.style.display = (okTxt && okProv) ? '' : 'none';
-    });
+  const txt = norm(buscador?.value);
+  const prov = norm(filtroProveedor?.value);
+  const tipo = selTipo.value; // obra | edificio
+
+  const cards = productosRow.querySelectorAll('.producto-card');
+
+  cards.forEach(card => {
+    const haystack = norm(`${card.dataset.codigo} ${card.dataset.nombre} ${card.dataset.descripcion}`);
+    const cardProv = norm(card.dataset.proveedor);
+
+    // 🔹 PRECIOS
+    const precioObra = parseFloat(card.dataset.precioObra || '0');
+    const precioEdificio = parseFloat(card.dataset.precioEdificio || '0');
+
+    // 🔹 FILTRO POR TEXTO / PROVEEDOR
+    const okTxt = !txt || haystack.includes(txt);
+    const okProv = !prov || cardProv === prov;
+
+    // 🔹 FILTRO POR TIPO DE CLIENTE
+    let okTipo = true;
+    if (tipo === 'obra') {
+      okTipo = precioObra > 0;
+    }
+    if (tipo === 'edificio') {
+      okTipo = precioEdificio > 0;
+    }
+
+    card.style.display = (okTxt && okProv && okTipo) ? '' : 'none';
+  });
+};
+
 
     // Mantener URL en sync (sin recargar)
     try {
@@ -594,19 +615,23 @@
   }
 
   selCliente.addEventListener('change', () => {
-    if (!window.COTIZACION_EDIT) suggestTipoByCliente();
-    applyClienteState();
-    syncPricesToTipo();
-    renderCart();
-  });
+  if (!window.COTIZACION_EDIT) suggestTipoByCliente();
+  applyClienteState();
+  syncPricesToTipo();
+  applyFilters();   // 👈 AÑADIR ESTO
+  renderCart();
+});
+
 
   document.getElementById('moneda').addEventListener('change', renderCart);
   document.getElementById('afecto_igv').addEventListener('change', renderCart);
 
   selTipo.addEventListener('change', () => {
-    syncPricesToTipo();
-    renderCart();
-  });
+  syncPricesToTipo();
+  applyFilters();   // 👈 AÑADIR ESTO
+  renderCart();
+});
+
 
   // -------------------------------
   // Events: Agregar / +10
